@@ -1,0 +1,847 @@
+openapi: 3.1.0
+info:
+  title: Api
+  version: 0.1.0
+  description: Private Solana wallet tracking and paper trading API
+servers:
+  - url: /api
+tags:
+  - name: health
+  - name: bot
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+  /gmgn/state:
+    get:
+      operationId: getBotState
+      tags: [bot]
+      summary: Get private dashboard and worker state
+      responses:
+        "200":
+          description: Dashboard state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BotState"
+  /gmgn/wallets:
+    get:
+      operationId: listWallets
+      tags: [bot]
+      summary: List watched wallets
+      responses:
+        "200":
+          description: Wallets
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Wallet"
+    post:
+      operationId: createWallet
+      tags: [bot]
+      summary: Add wallet to watchlist
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WalletInput"
+      responses:
+        "201":
+          description: Wallet added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Wallet"
+  /gmgn/wallets/{address}:
+    patch:
+      operationId: updateWallet
+      tags: [bot]
+      summary: Update wallet label, budget, or enabled state
+      parameters:
+        - name: address
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WalletUpdate"
+      responses:
+        "200":
+          description: Updated wallet
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Wallet"
+    delete:
+      operationId: deleteWallet
+      tags: [bot]
+      summary: Remove wallet
+      parameters:
+        - name: address
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Removed
+  /gmgn/wallets/{address}/research:
+    get:
+      operationId: getWalletResearch
+      tags: [bot]
+      summary: Get available GMGN wallet research metrics
+      parameters:
+        - name: address
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Research summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WalletResearch"
+  /gmgn/signals:
+    get:
+      operationId: listSignals
+      tags: [bot]
+      summary: List observed wallet signals and decisions
+      responses:
+        "200":
+          description: Signals
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Signal"
+  /gmgn/positions:
+    get:
+      operationId: listPositions
+      tags: [bot]
+      summary: List paper positions
+      responses:
+        "200":
+          description: Positions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Position"
+  /gmgn/trades:
+    get:
+      operationId: listTrades
+      tags: [bot]
+      summary: List paper fills and closes
+      responses:
+        "200":
+          description: Trades
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Trade"
+  /gmgn/settings:
+    get:
+      operationId: getRiskSettings
+      tags: [bot]
+      summary: Get persistent paper risk settings
+      responses:
+        "200":
+          description: Risk settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RiskSettings"
+    patch:
+      operationId: updateRiskSettings
+      tags: [bot]
+      summary: Update risk controls
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RiskSettingsUpdate"
+      responses:
+        "200":
+          description: Updated settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RiskSettings"
+  /gmgn/control:
+    post:
+      operationId: updateBotControl
+      tags: [bot]
+      summary: Persist pause and resume control
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BotControlInput"
+      responses:
+        "200":
+          description: Updated bot state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BotState"
+  /gmgn/audit:
+    get:
+      operationId: listAudit
+      tags: [bot]
+      summary: List private audit history
+      responses:
+        "200":
+          description: Audit records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AuditRecord"
+  /gmgn/discovery:
+    get:
+      operationId: getDiscovery
+      tags: [bot]
+      summary: Private daily derived wallet discovery, evidence and health
+      responses:
+        "200":
+          description: Real discovery state or honest blocked status
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/DiscoveryState"}
+  /gmgn/discovery/settings:
+    patch:
+      operationId: updateDiscoveryRules
+      tags: [bot]
+      summary: Review and save discovery and forward evaluation rules
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/DiscoveryRules"}
+      responses:
+        "200":
+          description: Saved discovery state
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/DiscoveryState"}
+  /gmgn/discovery/refresh:
+    post:
+      operationId: refreshDiscovery
+      tags: [bot]
+      summary: Queue a rate-limited refresh without overwriting historical rankings
+      responses:
+        "200":
+          description: Refresh queued or already pending
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/DiscoveryState"}
+  /gmgn/discovery/candidates/{address}:
+    patch:
+      operationId: updateDiscoveryCandidate
+      tags: [bot]
+      summary: Pin for observation or exclude; never bypass qualification
+      parameters:
+        - name: address
+          in: path
+          required: true
+          schema: {type: string}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/CandidateSelection"}
+      responses:
+        "200":
+          description: Updated state
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/DiscoveryState"}
+  /gmgn/backtesting:
+    get:
+      operationId: getBacktesting
+      tags: [bot]
+      summary: Private current backtest prerequisites and actual request history
+      responses:
+        "200":
+          description: Current coverage assessment and immutable requests
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/BacktestingState"}
+    post:
+      operationId: requestBacktest
+      tags: [bot]
+      summary: Assess and persist a whole-strategy backtest request without inventing results
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/HistoricalTestRequest"}
+      responses:
+        "200":
+          description: Actual request state; blocked is not a started simulation
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/HistoricalTestRun"}
+  /gmgn/backtesting/evidence:
+    get:
+      operationId: getProviderEvidence
+      tags: [gmgn]
+      summary: Private captured real-provider coverage evidence, not backtest results
+      responses:
+        "200":
+          description: Persisted direct-source observations and forward readiness
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ProviderEvidenceState"}
+    post:
+      operationId: inspectProviderHistory
+      tags: [gmgn]
+      summary: Bounded read-only provider inspection; never enrolls wallets or places orders
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/ProviderInspectionInput"}
+      responses:
+        "200":
+          description: Completed or reused coverage inspection, not a strategy run
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ProviderInspectionResult"}
+  /gmgn/backtesting/evidence/quote-probe:
+    post:
+      operationId: probePaperQuote
+      tags: [gmgn]
+      summary: Private single read-only quote probe using authentic discovered-trader evidence
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/ProviderInspectionInput"}
+      responses:
+        "200":
+          description: Persisted quote diagnostic or shared backoff; never starts paper evaluation
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ProviderInspectionResult"}
+  /gmgn/backtesting/quote-recovery:
+    get:
+      operationId: getQuoteRecovery
+      tags: [gmgn]
+      responses:
+        "200":
+          description: Private durable quote recovery status; GET never probes the provider
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/QuoteRecoveryStatus"}
+  /gmgn/backtesting/evidence/{id}:
+    get:
+      operationId: getProviderEvidenceDetail
+      tags: [gmgn]
+      summary: Private checksum-verified provider evidence export
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+      responses:
+        "200":
+          description: Original redacted structured source response and provenance
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ProviderEvidenceDetail"}
+  /gmgn/backtesting/{id}:
+    get:
+      operationId: getBacktestReport
+      tags: [bot]
+      summary: Owner-scoped JSON report suitable for export
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: {type: string, format: uuid}
+      responses:
+        "200":
+          description: Genuine report or blocked assessment; no credentials
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/HistoricalTestRun"}
+components:
+  schemas:
+    QuoteRecoveryStatus:
+      type: object
+      required: [state, attempts, maxAttempts, nextAttemptAt, lastAttemptAt, lastResult, heartbeatAt, runtime, verification, liveTradingEnabled, paperEvaluationStarted, note]
+      properties:
+        state: {type: string}
+        attempts: {type: integer}
+        maxAttempts: {type: integer}
+        nextAttemptAt: {type: [string, "null"], format: date-time}
+        lastAttemptAt: {type: [string, "null"], format: date-time}
+        lastResult: {type: [string, "null"]}
+        heartbeatAt: {type: [string, "null"], format: date-time}
+        runtime: {type: string}
+        verification: {type: object, additionalProperties: {}}
+        liveTradingEnabled: {type: boolean}
+        paperEvaluationStarted: {type: boolean}
+        note: {type: string}
+    HistoricalTestRequest:
+      type: object
+      properties:
+        developmentStart: {type: string, format: date}
+        developmentEnd: {type: string, format: date}
+        evaluationStart: {type: string, format: date}
+        evaluationEnd: {type: string, format: date}
+        freezeRules: {type: boolean}
+        expectedRulesHash: {type: string, pattern: "^[a-f0-9]{64}$"}
+    ProviderInspectionInput:
+      type: object
+      required: [confirmReadOnly]
+      properties:
+        confirmReadOnly: {type: boolean}
+    ProviderEvidence:
+      type: object
+      required: [id, collectionId, source, status, capturedAt, recordCount, returnedFrom, returnedTo, latencyMs, payloadHash, metadata, limitation, historicalStrategyReady, paperFillReady, scope]
+      properties:
+        id: {type: string}
+        collectionId: {type: string}
+        source: {type: string}
+        status: {type: string}
+        capturedAt: {type: string, format: date-time}
+        recordCount: {type: integer}
+        returnedFrom: {type: [string, "null"], format: date-time}
+        returnedTo: {type: [string, "null"], format: date-time}
+        latencyMs: {type: integer}
+        payloadHash: {type: [string, "null"]}
+        metadata: {type: object, additionalProperties: true}
+        limitation: {type: string}
+        historicalStrategyReady: {type: boolean}
+        paperFillReady: {type: boolean}
+        scope: {type: string}
+    ForwardReadiness:
+      type: object
+      required: [lastVerifiedReadAt, lastInspectionAt, tracking, paper, monitoringPaused, automaticSelectionPaused, liveTradingEnabled, reason, planVerified]
+      properties:
+        lastVerifiedReadAt: {type: [string, "null"], format: date-time}
+        lastInspectionAt: {type: [string, "null"], format: date-time}
+        tracking: {type: string}
+        paper: {type: string}
+        monitoringPaused: {type: boolean}
+        automaticSelectionPaused: {type: boolean}
+        liveTradingEnabled: {type: boolean}
+        reason: {type: string}
+        planVerified: {type: boolean}
+        apiKeyConfigured: {type: boolean}
+        readBackoffUntil: {type: [string, "null"], format: date-time}
+        readBlockReason: {type: [string, "null"]}
+    ProviderEvidenceState:
+      type: object
+      required: [evidence, readiness]
+      properties:
+        evidence: {type: array, items: {$ref: "#/components/schemas/ProviderEvidence"}}
+        readiness: {$ref: "#/components/schemas/ForwardReadiness"}
+    ProviderInspectionResult:
+      type: object
+      required: [state, reused, evidence]
+      properties:
+        state: {type: string}
+        reused: {type: boolean}
+        evidence: {type: array, items: {$ref: "#/components/schemas/ProviderEvidence"}}
+    ProviderEvidenceDetail:
+      type: object
+      required: [evidence, command, payload, provenance, resultsKind, liveTradingEnabled]
+      properties:
+        evidence: {$ref: "#/components/schemas/ProviderEvidence"}
+        command: {type: array, items: {type: string}}
+        payload: {type: [object, "null"], additionalProperties: true}
+        provenance: {type: string}
+        resultsKind: {type: string}
+        liveTradingEnabled: {type: boolean}
+    BacktestPrerequisite:
+      type: object
+      required: [code, status, detail, resolution]
+      properties:
+        code: {type: string}
+        status: {type: string, enum: [verified, missing, unverified, partial]}
+        detail: {type: string}
+        resolution: {type: string}
+    BacktestCoverage:
+      type: object
+      required: [name, records, scope, limitation]
+      properties:
+        name: {type: string}
+        records: {type: integer}
+        from: {type: [string, "null"], format: date-time}
+        to: {type: [string, "null"], format: date-time}
+        scope: {type: string}
+        limitation: {type: string}
+    BacktestAssessment:
+      type: object
+      required: [checkedAt, status, apiKeyPresent, permissions, gmgnQueriesAttempted, fullStrategyAvailable, prerequisites, coverage, sources, limitations]
+      properties:
+        checkedAt: {type: string, format: date-time}
+        status: {type: string, enum: [blocked, inconclusive, ready]}
+        apiKeyPresent: {type: boolean}
+        permissions: {type: string}
+        gmgnQueriesAttempted: {type: boolean}
+        fullStrategyAvailable: {type: boolean}
+        prerequisites: {type: array, items: {$ref: "#/components/schemas/BacktestPrerequisite"}}
+        coverage: {type: array, items: {$ref: "#/components/schemas/BacktestCoverage"}}
+        sources: {type: array, items: {type: string}}
+        limitations: {type: array, items: {type: string}}
+        providerEvidence: {type: array, items: {$ref: "#/components/schemas/ProviderEvidence"}}
+    BacktestPerformance:
+      type: object
+      required: [trades, netReturnAfterCostsPct, maxDrawdownPct, winRatePct, profitFactor, walletBreakdown, monthlyBreakdown, failures]
+      properties:
+        trades: {type: [integer, "null"]}
+        netReturnAfterCostsPct: {type: [number, "null"]}
+        maxDrawdownPct: {type: [number, "null"]}
+        winRatePct: {type: [number, "null"]}
+        profitFactor: {type: [number, "null"]}
+        walletBreakdown: {type: array, items: {type: object, additionalProperties: true}}
+        monthlyBreakdown: {type: array, items: {type: object, additionalProperties: true}}
+        failures: {type: array, items: {type: object, additionalProperties: true}}
+    HistoricalTestRun:
+      type: object
+      required: [id, kind, status, requestedAt, assessedAt, startedAt, completedAt, progressPct, processedTrades, request, rulesFrozenAt, rulesHash, frozenRules, assessment, validity, profitability, performance, assumptions, liveTradingEnabled]
+      properties:
+        id: {type: string}
+        kind: {type: string, enum: [whole_strategy_point_in_time]}
+        status: {type: string, enum: [assessing, running, completed, blocked, inconclusive, failed]}
+        requestedAt: {type: string, format: date-time}
+        assessedAt: {type: [string, "null"], format: date-time}
+        startedAt: {type: [string, "null"], format: date-time}
+        completedAt: {type: [string, "null"], format: date-time}
+        progressPct: {type: [number, "null"]}
+        processedTrades: {type: [integer, "null"]}
+        request: {$ref: "#/components/schemas/HistoricalTestRequest"}
+        rulesFrozenAt: {type: [string, "null"], format: date-time}
+        rulesHash: {type: [string, "null"]}
+        frozenRules: {type: object, additionalProperties: true}
+        assessment: {$ref: "#/components/schemas/BacktestAssessment"}
+        validity: {type: string}
+        profitability: {type: string}
+        performance: {$ref: "#/components/schemas/BacktestPerformance"}
+        assumptions: {type: array, items: {type: string}}
+        liveTradingEnabled: {type: boolean}
+    BacktestingState:
+      type: object
+      required: [assessment, runs, forwardEvaluationSeparate, notification, proposedRules, proposedRulesHash]
+      properties:
+        assessment: {$ref: "#/components/schemas/BacktestAssessment"}
+        runs: {type: array, items: {$ref: "#/components/schemas/HistoricalTestRun"}}
+        forwardEvaluationSeparate: {type: boolean}
+        notification: {type: string}
+        proposedRules: {type: object, additionalProperties: true}
+        proposedRulesHash: {type: string}
+    DiscoveryRules:
+      type: object
+      required: [enabled, selectionPaused, planConfirmed, maxRequestsPerHour, maxMonitoredWallets, tokenLimit, tradersPerToken, observationIntervalMinutes, minForwardDays, minHistoricalDays, minHistoricalSells, minForwardSells, minForwardNetPnlUsd, maxForwardDrawdownUsd, maxHistoricalLossRatePct, maxConcentrationPct, minHoldingSeconds, autoBuyBudgetUsd, excludeSuspicious]
+      properties:
+        enabled: {type: boolean}
+        selectionPaused: {type: boolean}
+        planConfirmed: {type: boolean}
+        maxRequestsPerHour: {type: integer, minimum: 1, maximum: 1000}
+        maxMonitoredWallets: {type: integer, minimum: 1, maximum: 25}
+        tokenLimit: {type: integer, minimum: 1, maximum: 10}
+        tradersPerToken: {type: integer, minimum: 1, maximum: 20}
+        observationIntervalMinutes: {type: integer, minimum: 5, maximum: 1440}
+        minForwardDays: {type: number, minimum: 1, maximum: 90}
+        minHistoricalDays: {type: number, minimum: 1, maximum: 30}
+        minHistoricalSells: {type: integer, minimum: 1, maximum: 1000}
+        minForwardSells: {type: integer, minimum: 1, maximum: 1000}
+        minForwardNetPnlUsd: {type: number, minimum: 0, maximum: 100000}
+        maxForwardDrawdownUsd: {type: number, minimum: 0, maximum: 100000}
+        maxHistoricalLossRatePct: {type: number, minimum: 0, maximum: 100}
+        maxConcentrationPct: {type: number, minimum: 0, maximum: 100}
+        minHoldingSeconds: {type: number, minimum: 0, maximum: 86400}
+        autoBuyBudgetUsd: {type: number, minimum: 0, maximum: 100000}
+        excludeSuspicious: {type: boolean}
+    DiscoveryMetrics:
+      type: object
+      properties:
+        historicalRealizedPnlUsd: {type: [number, "null"]}
+        historicalUnrealizedPnlUsd: {type: [number, "null"]}
+        historicalSells: {type: [number, "null"]}
+        historicalLossSamples: {type: [integer, "null"]}
+        historicalSpanDays: {type: [number, "null"]}
+        sampledTrades: {type: [number, "null"]}
+        lossRatePct: {type: [number, "null"]}
+        holdingSeconds: {type: [number, "null"]}
+        concentrationPct: {type: [number, "null"]}
+        suspicious: {type: [boolean, "null"]}
+        forwardNetPnlUsd: {type: [number, "null"]}
+        forwardSells: {type: integer}
+        forwardCostsUsd: {type: [number, "null"]}
+        forwardDrawdownUsd: {type: [number, "null"]}
+        forwardDays: {type: number}
+        copyabilityVerified: {type: boolean}
+    DiscoveryCandidate:
+      type: object
+      required: [address, state, pinned, manualExcluded, monitored, firstSeenAt, metrics, reasons, provenance]
+      properties:
+        address: {type: string}
+        state: {type: string, enum: [candidate, observation_only, qualified, excluded]}
+        pinned: {type: boolean}
+        manualExcluded: {type: boolean}
+        monitored: {type: boolean}
+        firstSeenAt: {type: string, format: date-time}
+        observationStartedAt: {type: [string, "null"], format: date-time}
+        lastObservedAt: {type: [string, "null"], format: date-time}
+        qualifiedAt: {type: [string, "null"], format: date-time}
+        evaluationId: {type: string}
+        score: {type: [integer, "null"]}
+        metrics: {$ref: "#/components/schemas/DiscoveryMetrics"}
+        reasons: {type: array, items: {type: string}}
+        provenance: {type: object, additionalProperties: true}
+    DiscoveryRanking:
+      type: object
+      required: [id, chicagoDay, status, createdAt, sourceLabel, coverage, entries]
+      properties:
+        id: {type: string}
+        chicagoDay: {type: string}
+        status: {type: string}
+        createdAt: {type: string, format: date-time}
+        completedAt: {type: [string, "null"], format: date-time}
+        sourceLabel: {type: string}
+        coverage: {type: string}
+        error: {type: [string, "null"]}
+        entries: {type: array, items: {type: object, additionalProperties: true}}
+    DiscoveryObservation:
+      type: object
+      required: [id, address, tokenAddress, side, observedAt, detectedAt, status, reason]
+      properties:
+        id: {type: string}
+        address: {type: string}
+        tokenAddress: {type: string}
+        side: {type: string}
+        observedAt: {type: string, format: date-time}
+        detectedAt: {type: string, format: date-time}
+        status: {type: string}
+        reason: {type: string}
+    DiscoveryState:
+      type: object
+      required: [status, reason, chicagoDay, timeZone, sourceLabel, coverage, executionBlocked, monitoringStatus, rules, candidates, rankings, observations, requestsLastHour]
+      properties:
+        status: {type: string, enum: [blocked, paused, ready, running]}
+        reason: {type: string}
+        chicagoDay: {type: string}
+        timeZone: {type: string}
+        sourceLabel: {type: string}
+        coverage: {type: string}
+        executionBlocked: {type: boolean}
+        monitoringStatus: {type: string}
+        lastRefreshAt: {type: [string, "null"], format: date-time}
+        nextRefreshDay: {type: string}
+        requestsLastHour: {type: integer}
+        rules: {$ref: "#/components/schemas/DiscoveryRules"}
+        candidates: {type: array, items: {$ref: "#/components/schemas/DiscoveryCandidate"}}
+        rankings: {type: array, items: {$ref: "#/components/schemas/DiscoveryRanking"}}
+        observations: {type: array, items: {$ref: "#/components/schemas/DiscoveryObservation"}}
+    CandidateSelection:
+      type: object
+      properties:
+        pinned: {type: boolean}
+        excluded: {type: boolean}
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required: [status]
+    Wallet:
+      type: object
+      properties:
+        address: { type: string }
+        label: { type: string }
+        enabled: { type: boolean }
+        buyBudgetUsd: { type: number }
+        createdAt: { type: string, format: date-time }
+        lastActivityAt: { type: ["string", "null"], format: date-time }
+      required: [address, label, enabled, buyBudgetUsd, createdAt, lastActivityAt]
+    WalletInput:
+      type: object
+      properties:
+        address: { type: string, minLength: 32, maxLength: 44 }
+        label: { type: string, minLength: 1, maxLength: 48 }
+        buyBudgetUsd: { type: number, exclusiveMinimum: 0, maximum: 100000 }
+      required: [address, label, buyBudgetUsd]
+    WalletUpdate:
+      type: object
+      properties:
+        label: { type: string, minLength: 1, maxLength: 48 }
+        enabled: { type: boolean }
+        buyBudgetUsd: { type: number, exclusiveMinimum: 0, maximum: 100000 }
+    WalletResearch:
+      type: object
+      properties:
+        address: { type: string }
+        status: { type: string }
+        sampleSize: { type: ["integer", "null"] }
+        realizedPnlUsd: { type: ["number", "null"] }
+        unrealizedPnlUsd: { type: ["number", "null"] }
+        winRate: { type: ["number", "null"] }
+        holdingTimeHours: { type: ["number", "null"] }
+        losses: { type: ["integer", "null"] }
+        concentrationPct: { type: ["number", "null"] }
+        consistency: { type: ["number", "null"] }
+        unavailableMetrics: { type: array, items: { type: string } }
+        updatedAt: { type: ["string", "null"], format: date-time }
+      required: [address, status, sampleSize, realizedPnlUsd, unrealizedPnlUsd, winRate, holdingTimeHours, losses, concentrationPct, consistency, unavailableMetrics, updatedAt]
+    Signal:
+      type: object
+      properties:
+        id: { type: string }
+        walletAddress: { type: string }
+        walletLabel: { type: string }
+        tokenAddress: { type: string }
+        tokenSymbol: { type: ["string", "null"] }
+        side: { type: string, enum: [buy, sell] }
+        observedAt: { type: string, format: date-time }
+        detectionAt: { type: string, format: date-time }
+        priceUsd: { type: ["number", "null"] }
+        priceObservedAt: { type: ["string", "null"], format: date-time }
+        status: { type: string, enum: [baseline, accepted, skipped] }
+        reason: { type: string }
+        txHash: { type: ["string", "null"] }
+      required: [id, walletAddress, walletLabel, tokenAddress, tokenSymbol, side, observedAt, detectionAt, priceUsd, priceObservedAt, status, reason, txHash]
+    Position:
+      type: object
+      properties:
+        id: { type: string }
+        tokenAddress: { type: string }
+        tokenSymbol: { type: ["string", "null"] }
+        leaderAddress: { type: string }
+        leaderLabel: { type: string }
+        quantity: { type: number }
+        costBasisUsd: { type: number }
+        markPriceUsd: { type: ["number", "null"] }
+        unrealizedPnlUsd: { type: ["number", "null"] }
+        openedAt: { type: string, format: date-time }
+        priceObservedAt: { type: ["string", "null"], format: date-time }
+      required: [id, tokenAddress, tokenSymbol, leaderAddress, leaderLabel, quantity, costBasisUsd, markPriceUsd, unrealizedPnlUsd, openedAt, priceObservedAt]
+    Trade:
+      type: object
+      properties:
+        id: { type: string }
+        signalId: { type: ["string", "null"] }
+        tokenAddress: { type: string }
+        tokenSymbol: { type: ["string", "null"] }
+        side: { type: string, enum: [buy, sell] }
+        quantity: { type: number }
+        priceUsd: { type: number }
+        notionalUsd: { type: number }
+        feeUsd: { type: number }
+        slippageUsd: { type: number }
+        realizedPnlUsd: { type: ["number", "null"] }
+        leaderAddress: { type: string }
+        filledAt: { type: string, format: date-time }
+        simulated: { type: boolean }
+      required: [id, signalId, tokenAddress, tokenSymbol, side, quantity, priceUsd, notionalUsd, feeUsd, slippageUsd, realizedPnlUsd, leaderAddress, filledAt, simulated]
+    RiskSettings:
+      type: object
+      properties:
+        maxBuyUsd: { type: number }
+        totalExposureUsd: { type: number }
+        maxOpenPositions: { type: integer }
+        maxTradesPerDay: { type: integer }
+        maxSignalAgeSeconds: { type: integer }
+        minLiquidityUsd: { type: number }
+        maxTopHolderPct: { type: number }
+        dailyLossCutoffUsd: { type: number }
+        feeBps: { type: number }
+        slippageBps: { type: number }
+        latencyMs: { type: integer }
+        stopLossPct: { type: ["number", "null"] }
+        takeProfitPct: { type: ["number", "null"] }
+        followSells: { type: boolean }
+        paperCashUsd: { type: number }
+        setupComplete: { type: boolean }
+      required: [maxBuyUsd, totalExposureUsd, maxOpenPositions, maxTradesPerDay, maxSignalAgeSeconds, minLiquidityUsd, maxTopHolderPct, dailyLossCutoffUsd, feeBps, slippageBps, latencyMs, stopLossPct, takeProfitPct, followSells, paperCashUsd, setupComplete]
+    RiskSettingsUpdate:
+      type: object
+      properties:
+        maxBuyUsd: { type: number, exclusiveMinimum: 0 }
+        totalExposureUsd: { type: number, exclusiveMinimum: 0 }
+        maxOpenPositions: { type: integer, minimum: 1, maximum: 100 }
+        maxTradesPerDay: { type: integer, minimum: 1, maximum: 500 }
+        maxSignalAgeSeconds: { type: integer, minimum: 5, maximum: 86400 }
+        minLiquidityUsd: { type: number, minimum: 0 }
+        maxTopHolderPct: { type: number, minimum: 0, maximum: 100 }
+        dailyLossCutoffUsd: { type: number, minimum: 0 }
+        feeBps: { type: number, minimum: 0, maximum: 5000 }
+        slippageBps: { type: number, minimum: 0, maximum: 5000 }
+        latencyMs: { type: integer, minimum: 0, maximum: 60000 }
+        stopLossPct: { type: ["number", "null"], minimum: 0, maximum: 100 }
+        takeProfitPct: { type: ["number", "null"], minimum: 0, maximum: 10000 }
+        followSells: { type: boolean }
+        paperCashUsd: { type: number, exclusiveMinimum: 0 }
+        setupComplete: { type: boolean }
+    BotState:
+      type: object
+      properties:
+        connectionStatus: { type: string, enum: [connected, missing_key, error, rate_limited] }
+        connectionMessage: { type: string }
+        workerStatus: { type: string, enum: [running, paused, blocked, idle, error] }
+        lastSuccessAt: { type: ["string", "null"], format: date-time }
+        observedLatencyMs: { type: ["integer", "null"] }
+        liveTradingEnabled: { type: boolean }
+        mode: { type: string, enum: [paper] }
+        paused: { type: boolean }
+        buysHalted: { type: boolean }
+        fullStopped: { type: boolean }
+        cashUsd: { type: number }
+        exposureUsd: { type: number }
+        realizedPnlUsd: { type: number }
+        unrealizedPnlUsd: { type: number }
+        equityUsd: { type: number }
+        equityHistory:
+          type: array
+          items:
+            $ref: "#/components/schemas/EquityPoint"
+        setupComplete: { type: boolean }
+        walletCount: { type: integer }
+        enabledWalletCount: { type: integer }
+        openPositionCount: { type: integer }
+      required: [connectionStatus, connectionMessage, workerStatus, lastSuccessAt, observedLatencyMs, liveTradingEnabled, mode, paused, buysHalted, fullStopped, cashUsd, exposureUsd, realizedPnlUsd, unrealizedPnlUsd, equityUsd, equityHistory, setupComplete, walletCount, enabledWalletCount, openPositionCount]
+    EquityPoint:
+      type: object
+      properties:
+        at: { type: string, format: date-time }
+        equityUsd: { type: number }
+      required: [at, equityUsd]
+    BotControlInput:
+      type: object
+      properties:
+        action: { type: string, enum: [pause, resume, halt_buys, resume_buys, stop, restart] }
+      required: [action]
+    AuditRecord:
+      type: object
+      properties:
+        id: { type: string }
+        action: { type: string }
+        detail: { type: string }
+        createdAt: { type: string, format: date-time }
+      required: [id, action, detail, createdAt]

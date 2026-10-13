@@ -1,0 +1,65 @@
+import { boolean, index, integer, jsonb, numeric, pgTable, primaryKey, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+
+export const gmgnDiscoverySettings = pgTable("gmgn_discovery_settings", {
+  userId: text("user_id").primaryKey(),
+  rules: jsonb("rules").notNull(),
+  refreshRequested: boolean("refresh_requested").notNull().default(false),
+  lastSuccessAt: timestamp("last_success_at", { withTimezone: true }),
+  lastError: text("last_error"),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+export const gmgnDiscoveryRuns = pgTable("gmgn_discovery_runs", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: text("user_id").notNull(),
+  chicagoDay: text("chicago_day").notNull(),
+  status: text("status").notNull().default("running"),
+  tokens: jsonb("tokens").notNull().default([]),
+  nextTokenIndex: integer("next_token_index").notNull().default(0),
+  entries: jsonb("entries").notNull().default([]),
+  coverage: text("coverage").notNull(),
+  error: text("error"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
+}, (t) => [index("gmgn_discovery_runs_owner_day").on(t.userId, t.chicagoDay)]);
+export const gmgnDiscoveryCandidates = pgTable("gmgn_discovery_candidates", {
+  userId: text("user_id").notNull(),
+  address: text("address").notNull(),
+  state: text("state").notNull().default("candidate"),
+  pinned: boolean("pinned").notNull().default(false),
+  manualExcluded: boolean("manual_excluded").notNull().default(false),
+  monitored: boolean("monitored").notNull().default(false),
+  evaluationId: uuid("evaluation_id").defaultRandom().notNull(),
+  firstSeenAt: timestamp("first_seen_at", { withTimezone: true }).notNull().defaultNow(),
+  evaluationStartedAt: timestamp("evaluation_started_at", { withTimezone: true }),
+  observationStartedAt: timestamp("observation_started_at", { withTimezone: true }),
+  lastObservedAt: timestamp("last_observed_at", { withTimezone: true }),
+  qualifiedAt: timestamp("qualified_at", { withTimezone: true }),
+  baselineComplete: boolean("baseline_complete").notNull().default(false),
+  baselineCursor: text("baseline_cursor"),
+  pollCursor: text("poll_cursor"),
+  baselineCursorHistory: jsonb("baseline_cursor_history").notNull().default([]),
+  pollCursorHistory: jsonb("poll_cursor_history").notNull().default([]),
+  score: integer("score"),
+  metrics: jsonb("metrics").notNull().default({}),
+  reasons: jsonb("reasons").notNull().default([]),
+  provenance: jsonb("provenance").notNull(),
+  evaluationRules: jsonb("evaluation_rules"),
+}, (t) => [primaryKey({ columns: [t.userId, t.address] }), index("gmgn_discovery_candidates_owner").on(t.userId)]);
+export const gmgnDiscoveryObservations = pgTable("gmgn_discovery_observations", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: text("user_id").notNull(),
+  address: text("address").notNull(),
+  evaluationId: uuid("evaluation_id").notNull(),
+  eventIdentity: text("event_identity").notNull(),
+  tokenAddress: text("token_address").notNull(),
+  side: text("side").notNull(),
+  observedAt: timestamp("observed_at", { withTimezone: true }).notNull(),
+  detectedAt: timestamp("detected_at", { withTimezone: true }).notNull().defaultNow(),
+  status: text("status").notNull(),
+  reason: text("reason").notNull(),
+  provenance: jsonb("provenance").notNull(),
+}, (t) => [uniqueIndex("gmgn_discovery_observation_unique").on(t.userId, t.evaluationId, t.eventIdentity), index("gmgn_discovery_observations_recent").on(t.userId, t.detectedAt)]);
+export const gmgnReadReservations = pgTable("gmgn_read_reservations", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index("gmgn_read_reservations_time").on(t.createdAt)]);

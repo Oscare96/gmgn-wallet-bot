@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "GMGN Wallet Tracker"
+description = "A private Solana wallet-following dashboard for researching watched traders, monitoring their activity, and testing risk-limited copy strategies in paper mode."
+version = "1.0.0"
+id = "artifacts/gmgn-wallet-bot"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 22210
+
+[services.development]
+run = "pnpm --filter @workspace/gmgn-wallet-bot run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/gmgn-wallet-bot", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/gmgn-wallet-bot/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "22210"
+BASE_PATH = "/"
